@@ -1,0 +1,5 @@
+&sdl_dc {
+    status = "okay";
+    width = <101>;
+    height = <33>;
+};
