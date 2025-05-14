@@ -27,11 +27,7 @@ inline void sim_display_px(size_t x, size_t y, bool val) {
     // Out of bounds
     if (pos >= framebuf_desc.buf_size/4) return;
 
-    if (val) {
-        framebuf[pos] = px_on;
-    } else {
-        framebuf[pos] = px_off;
-    }
+    framebuf[pos] = val ? px_on : px_off;
 }
 
 inline void sim_display_flip() {
@@ -76,6 +72,8 @@ int sim_display_setup() {
         LOG_ERR("Failed to allocate framebuffer.");
         return -1;
     }
+
+    sim_display_backlight(false);
 
     display_blanking_off(display_dev);
 
