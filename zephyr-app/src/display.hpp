@@ -2,10 +2,11 @@
 
 #include <stdint.h>
 
-#define DISPLAY_FRAME_TIME_MS 50
-
 // Update a single pixel in the back buffer
 void display_px(uint16_t x, uint16_t y, bool val);
+
+// If double buffering is disabled, this does nothing
+void display_flip();
 
 void display_backlight(bool enabled);
 

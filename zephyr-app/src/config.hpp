@@ -1,0 +1,4 @@
+#pragma once
+
+#define DISPLAY_DOUBLE_BUFFER 1
+#define DISPLAY_FRAME_TIME_MS 100

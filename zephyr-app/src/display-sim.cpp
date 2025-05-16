@@ -6,6 +6,7 @@ LOG_MODULE_REGISTER(display_sim, LOG_LEVEL_INF);
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
 
+#include "config.hpp"
 #include "display.hpp"
 
 #define PX_FG ((uint32_t) 0xFF183747)
@@ -22,6 +23,7 @@ struct display_capabilities display_caps;
 
 struct display_buffer_descriptor framebuf_desc;
 uint32_t* framebuf;
+bool framebuf_dirty;
 
 static inline void sim_display_px(uint16_t x, uint16_t y, bool val) {
 
@@ -33,7 +35,7 @@ static inline void sim_display_px(uint16_t x, uint16_t y, bool val) {
     framebuf[pos] = val ? px_on : px_off;
 }
 
-inline void sim_display_flip() {
+inline void sim_display_push() {
     display_write(display_dev, 0, 0, &framebuf_desc, framebuf);
 }
 
@@ -44,6 +46,8 @@ static inline void sim_display_backlight(bool enabled) {
     for (size_t i=0; i < display_caps.x_resolution * display_caps.y_resolution; i++) {
         framebuf[i] = framebuf[i] == px_on ? px_on : px_off;
     }
+
+    framebuf_dirty = true;
 }
 
 static int sim_display_setup() {
@@ -79,9 +83,9 @@ static int sim_display_setup() {
         }
 
         sim_display_backlight(false);
+        sim_display_push();
     }
 
-    sim_display_flip();
 
     k_mutex_unlock(&framebuf_mutex);
 
@@ -97,7 +101,10 @@ void sim_display_thread(void* d0, void* d1, void* d2) {
 
     while (true) {
         k_mutex_lock(&framebuf_mutex, K_FOREVER);
-            sim_display_flip();
+            if (framebuf_dirty) {
+                sim_display_push();
+                framebuf_dirty = false;
+            }
         k_mutex_unlock(&framebuf_mutex);
 
         // TODO: Subtract the duration of this last iteration
@@ -109,16 +116,26 @@ K_THREAD_DEFINE(sim_display_tid, 512,
                sim_display_thread, NULL, NULL, NULL,
                K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
-
 /*
  * Exposed interface
  */
+
 void display_px(uint16_t x, uint16_t y, bool val) {
     k_mutex_lock(&framebuf_mutex, K_FOREVER);
         sim_display_px(x, y, val);
+#if DISPLAY_DOUBLE_BUFFER!=1
+        framebuf_dirty = true;
+#endif
     k_mutex_unlock(&framebuf_mutex);
 }
 
+void display_flip() {
+#if DISPLAY_DOUBLE_BUFFER==1
+    k_mutex_lock(&framebuf_mutex, K_FOREVER);
+        framebuf_dirty = true;
+    k_mutex_unlock(&framebuf_mutex);
+#endif
+}
 
 void display_backlight(bool enabled) {
     k_mutex_lock(&framebuf_mutex, K_FOREVER);
@@ -135,4 +152,3 @@ void display_init() {
     sim_display_setup();
     k_thread_start(sim_display_tid);
 }
-
