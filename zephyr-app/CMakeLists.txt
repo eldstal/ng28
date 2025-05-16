@@ -9,4 +9,4 @@ project(ng28)
 
 
 
-target_sources(app PRIVATE src/main.cpp)
+target_sources(app PRIVATE src/main.cpp src/display-sim.cpp)
