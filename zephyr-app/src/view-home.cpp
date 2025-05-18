@@ -24,6 +24,8 @@ void HomeView::draw() {
         display_px(0,   y, true);
         display_px(w-1, y, true);
     }
+
+    display_flip();
 }
 
 void HomeView::event(const ViewEvent& ev, ViewResponse& resp) {

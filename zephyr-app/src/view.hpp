@@ -17,7 +17,7 @@ struct ViewEvent {
 
         // If you receive this, you've been asked to terminate
         // your view. No matter what you return, your view will
-        // be k_free'd when you do.
+        // be delete'd when you do.
         TERMINATE
     };
 
@@ -40,7 +40,7 @@ struct ViewResponse {
         HOME,
 
         // Launch a child view. When it terminates, control will return to you.
-        // k_malloc() the new view and return it in launch_view
+        // use new to allocate the new view and return it in launch_view
         LAUNCH
     };
 
@@ -63,6 +63,8 @@ class View {
     // You're the foreground view
     // Something happened
     // What do you do?
-    virtual void event(const ViewEvent& ev, ViewResponse& resp);
+    virtual void event(const ViewEvent& ev, ViewResponse& resp) = 0;
+
+    virtual ~View();
 
 };
