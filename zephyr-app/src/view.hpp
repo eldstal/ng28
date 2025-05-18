@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 class View;
 
 struct ViewEvent {
@@ -19,9 +21,9 @@ struct ViewEvent {
         TERMINATE
     };
 
-    Kind kind;
+    Kind kind = REDRAW;
 
-    int btn;
+    int btn = -1;
 };
 
 struct ViewResponse {
@@ -42,12 +44,12 @@ struct ViewResponse {
         LAUNCH
     };
 
-    Kind kind;
+    Kind kind = NOP;
 
     // If you return action==LAUNCH
     // create a new view and return it here.
     // The manager will call delete on this when it terminates.
-    View* launch_view;
+    View* launch_view = NULL;
 };
 
 class View {
@@ -55,6 +57,8 @@ class View {
 
     // TODO: What if you don't want an event driven view?
     // If we're making games, this probably won't be good enough.
+
+    // TODO: What if you need refreshes every now and then? Like the clock on the home screen
 
     // You're the foreground view
     // Something happened

@@ -5,6 +5,9 @@
 // Update a single pixel in the back buffer
 void display_px(uint16_t x, uint16_t y, bool val);
 
+// Set all pixels to the same value
+void display_fill(bool val);
+
 // If double buffering is disabled, this does nothing
 void display_flip();
 

@@ -129,6 +129,20 @@ void display_px(uint16_t x, uint16_t y, bool val) {
     k_mutex_unlock(&framebuf_mutex);
 }
 
+void display_fill(bool val) {
+    k_mutex_lock(&framebuf_mutex, K_FOREVER);
+        for (size_t x=0; x<display_caps.x_resolution; x++) {
+            for (size_t y=0; y<display_caps.x_resolution; y++) {
+                sim_display_px(x, y, val);
+            }
+        }
+
+#if DISPLAY_DOUBLE_BUFFER!=1
+        framebuf_dirty = true;
+#endif
+    k_mutex_unlock(&framebuf_mutex);
+}
+
 void display_flip() {
 #if DISPLAY_DOUBLE_BUFFER==1
     k_mutex_lock(&framebuf_mutex, K_FOREVER);

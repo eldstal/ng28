@@ -7,6 +7,7 @@ LOG_MODULE_REGISTER(viewmanager, LOG_LEVEL_INF);
 
 #include "viewmanager.hpp"
 #include "view.hpp"
+#include "view-home.hpp"
 
 #define evkind ViewEvent::Kind
 #define reskind ViewResponse::Kind
@@ -19,14 +20,9 @@ struct ViewStackEntry {
 
 ViewStackEntry* view_stack;
 
-void vman_start() {
+static void push_and_handle_event(const ViewEvent& ev);
 
-    ViewStackEntry home = { };
-    view_stack = &home;
-
-}
-
-void send_terminate(View* view) {
+static void send_terminate(View* view) {
                     
     ViewEvent terminate = { .kind = evkind::TERMINATE };
     ViewResponse ignored = { .kind = reskind::NOP, .launch_view = NULL };
@@ -38,7 +34,7 @@ void send_terminate(View* view) {
 
 }
 
-void terminate_active_view() {
+static void terminate_active_view() {
     if (view_stack->parent == NULL) {
         LOG_ERR("Tried to TERMINATE home view. Can't do that.\n");
     } else {
@@ -51,13 +47,18 @@ void terminate_active_view() {
         k_free(old_head);
 
         LOG_ERR("View terminated.");
+
     }
 }
 
-void vman_thread(void* d0, void* d1, void* d2) {
+static void redraw_active_view() {
+    // Make the reopened view perform a full draw
+    ViewEvent redraw_event = { .kind=evkind::REDRAW };
+    push_and_handle_event(redraw_event);
+}
 
-    while (true) {
-        ViewEvent ev = { .kind = evkind::REDRAW };
+
+static void push_and_handle_event(const ViewEvent& ev) {
         ViewResponse resp = { .kind = reskind::NOP };
 
         view_stack->view->event(ev, resp);
@@ -68,6 +69,16 @@ void vman_thread(void* d0, void* d1, void* d2) {
 
             case reskind::TERMINATE:
                 terminate_active_view();
+                redraw_active_view();
+
+                break;
+
+            case reskind::HOME:
+                while (view_stack->parent != NULL) {
+                    terminate_active_view();
+                }
+                redraw_active_view();
+
                 break;
 
             case reskind::LAUNCH:
@@ -80,19 +91,40 @@ void vman_thread(void* d0, void* d1, void* d2) {
                     view_stack = new_head;
 
                     LOG_ERR("View launched.");
-                }
 
-            case reskind::HOME:
-                while (view_stack->parent != NULL) {
-                    terminate_active_view();
+                    // Make the newly opened view perform a full draw
+                    ViewEvent redraw_event = { .kind=evkind::REDRAW };
+                    push_and_handle_event(redraw_event);
                 }
+                break;
 
         }
 
 
+}
+
+void vman_thread(void* d0, void* d1, void* d2) {
+
+    while (true) {
+        ViewEvent ev = { .kind = evkind::REDRAW };
+
+        push_and_handle_event(ev);
+
+        k_sleep(K_MSEC(100));
     }
 }
 
 K_THREAD_DEFINE(vman_tid, 1024,
                vman_thread, NULL, NULL, NULL,
                K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+
+
+void vman_start() {
+
+    HomeView* home = new HomeView();
+    ViewStackEntry head = { .parent = NULL, .view = home};
+    view_stack = &head;
+
+    k_thread_start(vman_tid);
+}
+
